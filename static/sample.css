@@ -1,0 +1,10 @@
+.header1 {
+    color: white;
+    background-color: #0aa;
+    border: 5px solid black;
+}
+
+.test {
+    color: pink;
+    border: 10px dotted red;
+}

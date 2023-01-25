@@ -1,81 +1,46 @@
 import subprocess
 import re
-import sqlite3
+import socket
+import pickle
+import struct
 
-data = ["", list(),dict()]
-pkg = "pacman -Qe"
-data[0] = subprocess.run(['uname', '-sr'],
+# fetch system and hardware info
+uname = subprocess.run(['uname', '-sr'],
 			stdout=subprocess.PIPE).stdout.decode('ascii')
-
 hw = subprocess.run(['sudo', 'lshw', '-short'],
                     stdout=subprocess.PIPE).stdout.decode('ascii')
-
+hardware_data = list()
+hardware_data.append("HWINFO")
+hardware_data.append(uname)
 for l in hw.splitlines():
-	data[1].append(re.sub(r'\s+', ' ', l))
+	hardware_data.append(re.sub(r'\s+', ' ', l))
 
+# fetch package data
+package_data = dict()
+package_data["HEADER"] = "PACKAGES"
 pkg = subprocess.run(['pacman', '-Qe'],
 			stdout=subprocess.PIPE).stdout.decode('ascii')
 for p in pkg.splitlines():
-	data[2][p.split()[0]] = p.split()[1]
-
-conn = sqlite3.connect('hwinfo.db')
-
-c = conn.cursor()
-try:
-	c.execute("""CREATE TABLE packages (
-				name text,
-				version text
-				)""")
-except:
-    print("Table packages already exists")
-
-try:
-    c.execute("""CREATE TABLE hwinfo (
-     			element text
-        		)""")
-except:
-    print("Table hwinfo already exists")
-
-c.execute("SELECT * FROM packages")
-result = c.fetchall()
-
-if len(result) == 0:
-    for key in data[2].keys():
-        c.execute(f"INSERT INTO packages VALUES ('{key}', '{data[2][key]}')")
-        print(f"[DB-LOG] Successfully inserted '{key}: {data[2][key]}' into table 'packages'")
-else:
-    c.execute("SELECT * FROM packages")
-    for key in data[2].keys():
-        result = c.fetchone()
-        if type(result) is type(None):
-            continue
-        if key != result[0]:
-            c.execute(f"INSERT INTO packages VALUES ('{key}', '{data[2][key]}')")
-            print(f"[DB-LOG] Successfully inserted '{key}: {data[2][key]}' into table 'packages'")
+	package_data[p.split()[0]] = p.split()[1]
 
 
-c.execute("SELECT * FROM hwinfo")
-result = c.fetchall()
+s = socket.socket()
+port = 25000
+ip_addr = '127.0.0.1'
+s.connect((ip_addr, port))
 
-if len(result) == 0:
-    for item in data[1]:
-        c.execute(f"INSERT INTO hwinfo VALUES ('{item}')")
-        print(f"[DB-LOG] Successfully inserted '{item}' into table 'hwinfo'")
-else:
-    c.execute("SELECT * FROM hwinfo")
-    for item in data[1]:
-        result = c.fetchone()
-        if type(result) is type(None):
-            continue
-        if item != result[0]:
-            c.execute(f"INSERT INTO hwinfo VALUES ('{item}')")
-            print(f"[DB-LOG] Successfully inserted '{item}' into table 'hwinfo'")
+pkg_dat = pickle.dumps(package_data)
+s.sendall(struct.pack('>I', len(pkg_dat)))
+s.sendall(pkg_dat)
 
-c.execute(f"SELECT * FROM hwinfo WHERE element='System: {data[0]}'")
-result = c.fetchall()
-if len(result) == 0:
-    c.execute(f"INSERT INTO hwinfo VALUES ('System: {data[0]}')")
-    print(f"[DB-LOG] Successfully inserted '{data[0]}' into table 'hwinfo'")
+recv_msg = s.recv(1024).decode()
 
-conn.commit()
-conn.close()
+hw_data = pickle.dumps(hardware_data)
+s.sendall(struct.pack('>I', len(hw_data)))
+s.sendall(hw_data)
+
+recv_msg = s.recv(1024).decode()
+
+print(recv_msg)
+
+s.close()
