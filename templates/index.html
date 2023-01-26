@@ -2,10 +2,32 @@
 <head>
     <title>Flask app</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='sample.css') }}">
+    <script src="{{ url_for('static', filename='collapsible.js') }}"></script>
 </head>
     <body>
-        <h1 class="header1">Hello this is a sample h1 in Flask</h1>
-        <div class="test"></div>
-
+        <div class="grid">
+            <div class="header top">Hardware and package info for machine {{hwinfo[0][0]}}</div>
+            <button type="button left middle" class="dropdown">Hardware info</button>
+            <div class="content left bottom">
+                <table class="table">
+                    {% for hwitem in hwinfo[1:] %}
+                    <tr>
+                        <td>{{hwitem[0]}}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <button type="button right middle" class="dropdown">Package info</button>
+            <div class="content right bottom">
+                <table class="table">
+                    {% for pkg in pkg_info %}
+                    <tr>
+                        <td>{{pkg[0]}}</td>
+                        <td>{{pkg[1]}}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
     </body>
 </html>

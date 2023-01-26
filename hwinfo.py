@@ -10,14 +10,12 @@ uname = subprocess.run(['uname', '-sr'],
 hw = subprocess.run(['sudo', 'lshw', '-short'],
                     stdout=subprocess.PIPE).stdout.decode('ascii')
 hardware_data = list()
-hardware_data.append("HWINFO")
 hardware_data.append(uname)
 for l in hw.splitlines():
 	hardware_data.append(re.sub(r'\s+', ' ', l))
 
 # fetch package data
 package_data = dict()
-package_data["HEADER"] = "PACKAGES"
 pkg = subprocess.run(['pacman', '-Qe'],
 			stdout=subprocess.PIPE).stdout.decode('ascii')
 for p in pkg.splitlines():
